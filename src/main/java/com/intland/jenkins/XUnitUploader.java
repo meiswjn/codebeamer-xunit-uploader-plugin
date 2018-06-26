@@ -205,6 +205,11 @@ public class XUnitUploader extends Notifier implements SimpleBuildStep {
 
         final String testResults = run.getEnvironment(taskListener).expand(this.testResultsDir);
 
+        if (StringUtils.isEmpty(testResults)) {
+        	logger.println("Test result directory is not set!");
+        	return ;
+        }
+        
         logger.println("test results dir:" + testResults);
         logger.println("file path:" + filePath);
 
@@ -215,8 +220,15 @@ public class XUnitUploader extends Notifier implements SimpleBuildStep {
 
         File path = new File(testResultsAbsolutePath);
 
-        File[] files = collector.getFiles(path);
-        logger.println("List of files:\n===\n" + collector.getFileList(files) + "\n===");
+        File[] files = new File[0];
+        try {
+	        files = collector.getFilesWithCheck(path);
+        } catch(IllegalArgumentException ex) {
+        	logger.println(ex.getMessage());
+        	// Can not load test result xml files
+        	return ;
+        }
+	    logger.println("List of files:\n===\n" + collector.getFileList(files) + "\n===");
 
         logger.println("Zip files.");
         File zipFile = null;
