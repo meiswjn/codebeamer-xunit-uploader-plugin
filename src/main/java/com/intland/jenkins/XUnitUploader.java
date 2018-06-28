@@ -9,6 +9,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -216,7 +218,8 @@ public class XUnitUploader extends Notifier implements SimpleBuildStep {
         XUnitFileCollector collector = new XUnitFileCollector();
 
         String projectRoot = filePath.getRemote();
-        String testResultsAbsolutePath = projectRoot + "/" + testResults;
+        Path p = Paths.get(testResults); 
+        String testResultsAbsolutePath = p.isAbsolute() ? testResults : projectRoot + "/" + testResults;
 
         File path = new File(testResultsAbsolutePath);
 
