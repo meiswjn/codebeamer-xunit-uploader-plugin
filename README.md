@@ -11,4 +11,4 @@ export GRADLE_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address
 ./gradlew -Dstapler.jelly.noCache=false server --no-daemon -Djenkins.httpPort=8081
 ```
 
-Then setup a remote-debugging session.
+Then setup a remote-debugging session
