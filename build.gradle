@@ -7,7 +7,7 @@ group 'org.jenkins-ci.plugins'
 description = 'This Plugin uploads XUnit results to CodeBeamer'
 
 jenkinsPlugin {
-    coreVersion = '2.46.3'
+    coreVersion = '2.150.3'
     displayName = 'CodeBeamer XUnit Uploader'
     shortName = 'codebeamer-xunit-uploader'
 
