@@ -15,6 +15,9 @@ import java.util.Collections;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import hudson.util.io.ArchiverFactory;
+import hudson.util.DirScanner;
+
 import javax.annotation.Nonnull;
 
 import org.apache.commons.io.IOUtils;
@@ -206,54 +209,43 @@ public class XUnitUploader extends Notifier implements SimpleBuildStep {
         logger.println("Hello XUnitUploader Plugin!");
 
         final String testResults = run.getEnvironment(taskListener).expand(this.testResultsDir);
+        final String testResultsDirName = run.getEnvironment(taskListener).expand(this.testResultsDir);
+        final FilePath testResultsFilePath = new FilePath(filePath, testResultsDirName);
 
         if (StringUtils.isEmpty(testResults)) {
         	logger.println("Test result directory is not set!");
         	return ;
         }
         
-        logger.println("test results dir:" + testResults);
-        logger.println("file path:" + filePath);
+        logger.println("File path of xml files:" + testResultsFilePath);
 
-        XUnitFileCollector collector = new XUnitFileCollector();
-
-        String projectRoot = filePath.getRemote();
-        Path p = Paths.get(testResults); 
-        String testResultsAbsolutePath = p.isAbsolute() ? testResults : projectRoot + "/" + testResults;
-
-        File path = new File(testResultsAbsolutePath);
-
-        File[] files = new File[0];
-        try {
-	        files = collector.getFilesWithCheck(path);
-        } catch(IllegalArgumentException ex) {
-        	logger.println(ex.getMessage());
-        	// Can not load test result xml files
-        	return ;
-        }
-	    logger.println("List of files:\n===\n" + collector.getFileList(files) + "\n===");
-
-        logger.println("Zip files.");
         File zipFile = null;
         try {
-        	zipFile = zipFiles(files);
-        
-	        logger.println("Upload test results.");
-	        RestAdapter rest = PluginConfiguration.getInstance().getRestAdapter();
-	        try {
-	            rest.uploadXUnitResults(new File[] { zipFile });
-	        } catch (RequestFailed e) {
-	            logger.println(e.getMessage());
-	            throw e;
-	        }
+            zipFile = File.createTempFile("xunit", ".zip");
+            try (FileOutputStream fos = new FileOutputStream(zipFile)) {
+                int filesArchived = testResultsFilePath.archive(ArchiverFactory.ZIP, fos, new DirScanner.Glob("*.xml", ""));
+                logger.println("Found " + filesArchived + " xml files");
+                fos.flush();
+            }
+            
+            logger.println("Upload test results.");
+            RestAdapter rest = PluginConfiguration.getInstance().getRestAdapter();
+            rest.uploadXUnitResults(new File[]{zipFile});
+        } catch (Exception e) {
+            logger.println(e.getLocalizedMessage());
         } finally {
-        	if (zipFile != null && zipFile.exists()) {
-        		try {
-        			zipFile.delete();
-        		} catch(Exception ex) {
-        			logger.println("Zip file cannot be deleted.");
-        		}
-        	}
+            if (zipFile != null && zipFile.exists()) {
+                boolean success = false;
+                try {
+                    success = zipFile.delete();
+                } catch (SecurityException se) {
+                    logger.println("Security Manager rejected attempt to delete zip file");
+                } finally {
+                    if (!success) {
+                        logger.println("unable to delete zip file");
+                    }
+                }
+            }
         }
 
         logger.println("Goodbye XUnitUploader Plugin!");
